@@ -16,8 +16,9 @@ model-viewer#reveal {
 
 #default-ar-button {
   position: absolute;
-  margin-right: 2vw;
-  margin-bottom: 10vh;
+  bottom: -15vh;
+  width: 5vw;
+  height: 5vh;
 }
 
 .grid-container{
