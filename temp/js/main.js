@@ -1,65 +1,299 @@
- var demo = new CANNON.Demo();
-      var size = 1;
+import * as THREE from './three.module.js';
 
-      demo.addScene("Raycasting",function(){
+import { MeshSurfaceSampler } from './MeshSurfaceSampler.js';
+import { GLTFLoader } from './GLTFLoader.js';
+import Stats from './stats.module.js';
+import { GUI } from './dat.gui.module.js';
 
-        var shape = CANNON.Trimesh.createTorus(4, 3.5, 16, 16);
+var camera, scene, renderer, stats;
 
-        // Create world
-        var world = demo.getWorld();
-        world.gravity.set(0,0,0);
+var api = {
 
-        // particle as marker for the raycast hit
-        var N = 5;
-        var particleShape = new CANNON.Particle();
-        var particleBodies = [];
-        for(var i=0; i<N*N; i++){
-          var particleBody = new CANNON.Body({
-            mass: 1,
-            shape: particleShape,
-            collisionResponse: false
-          });
-          world.addBody(particleBody);
-          demo.addVisual(particleBody);
-          particleBodies.push(particleBody);
+    count: 350,
+    distribution: 'random',
+    resample: resample,
+    surfaceColor: 0xFFF784,
+    backgroundColor: 0xE39469,
+
+};
+
+var stemMesh, blossomMesh;
+var stemGeometry, blossomGeometry;
+var stemMaterial, blossomMaterial;
+
+var sampler;
+var count = api.count;
+var ages = new Float32Array( count );
+var scales = new Float32Array( count );
+var dummy = new THREE.Object3D();
+
+var _position = new THREE.Vector3();
+var _normal = new THREE.Vector3();
+var _scale = new THREE.Vector3();
+
+// var surfaceGeometry = new THREE.BoxBufferGeometry( 10, 10, 10 ).toNonIndexed();
+var surfaceGeometry = new THREE.TorusBufferGeometry( 10, 3, 16, 100 ).toNonIndexed();
+var surfaceMaterial = new THREE.MeshLambertMaterial( { color: api.surfaceColor, wireframe: false } );
+var surface = new THREE.Mesh( surfaceGeometry, surfaceMaterial );
+
+// Source: https://gist.github.com/gre/1650294
+var easeOutCubic = function ( t ) {
+
+    return ( -- t ) * t * t + 1;
+
+};
+
+// Scaling curve causes particles to grow quickly, ease gradually into full scale, then
+// disappear quickly. More of the particle's lifetime is spent around full scale.
+var scaleCurve = function ( t ) {
+
+    return Math.abs( easeOutCubic( ( t > 0.5 ? 1 - t : t ) * 2 ) );
+
+};
+
+var loader = new GLTFLoader();
+
+loader.load( '../models/Flower.glb', function ( gltf ) {
+
+    var _stemMesh = gltf.scene.getObjectByName( 'Stem' );
+    var _blossomMesh = gltf.scene.getObjectByName( 'Blossom' );
+
+    stemGeometry = new THREE.InstancedBufferGeometry();
+    blossomGeometry = new THREE.InstancedBufferGeometry();
+
+    THREE.BufferGeometry.prototype.copy.call( stemGeometry, _stemMesh.geometry );
+    THREE.BufferGeometry.prototype.copy.call( blossomGeometry, _blossomMesh.geometry );
+
+    var defaultTransform = new THREE.Matrix4()
+        .makeRotationX( Math.PI )
+        .multiply( new THREE.Matrix4().makeScale( 7, 7, 7 ) );
+
+    stemGeometry.applyMatrix4( defaultTransform );
+    blossomGeometry.applyMatrix4( defaultTransform );
+
+    stemMaterial = _stemMesh.material;
+    blossomMaterial = _blossomMesh.material;
+
+    // Assign random colors to the blossoms.
+    var _color = new THREE.Color();
+    var color = new Float32Array( count * 3 );
+    var blossomPalette = [ 0xF20587, 0xF2D479, 0xF2C879, 0xF2B077, 0xF24405 ];
+
+    for ( var i = 0; i < count; i ++ ) {
+
+        _color.setHex( blossomPalette[ Math.floor( Math.random() * blossomPalette.length ) ] );
+        _color.toArray( color, i * 3 );
+
+    }
+
+    blossomGeometry.setAttribute( 'color', new THREE.InstancedBufferAttribute( color, 3 ) );
+    blossomMaterial.vertexColors = true;
+
+    stemMesh = new THREE.InstancedMesh( stemGeometry, stemMaterial, count );
+    blossomMesh = new THREE.InstancedMesh( blossomGeometry, blossomMaterial, count );
+
+    // Instance matrices will be updated every frame.
+    stemMesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage );
+    blossomMesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage );
+
+    resample();
+
+    init();
+    animate();
+
+} );
+
+function init() {
+
+    camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 100 );
+    camera.position.set( 25, 25, 25 );
+    camera.lookAt( 0, 0, 0 );
+
+    //
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( api.backgroundColor );
+
+    var pointLight = new THREE.PointLight( 0xAA8899, 0.75 );
+    pointLight.position.set( 50, - 25, 75 );
+    scene.add( pointLight );
+
+    scene.add( new THREE.HemisphereLight() );
+
+    //
+
+    scene.add( stemMesh );
+    scene.add( blossomMesh );
+
+    scene.add( surface );
+
+    //
+
+    var gui = new GUI();
+    gui.add( api, 'count', 0, count ).onChange( function () {
+
+        stemMesh.count = api.count;
+        blossomMesh.count = api.count;
+
+    } );
+
+    // gui.addColor( api, 'backgroundColor' ).onChange( function () {
+
+    // 	scene.background.setHex( api.backgroundColor );
+
+    // } );
+
+    // gui.addColor( api, 'surfaceColor' ).onChange( function () {
+
+    // 	surfaceMaterial.color.setHex( api.surfaceColor );
+
+    // } );
+
+    gui.add( api, 'distribution' ).options( [ 'random', 'weighted' ] ).onChange( resample );
+    gui.add( api, 'resample' );
+
+    //
+
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
+
+    //
+
+    stats = new Stats();
+    document.body.appendChild( stats.dom );
+
+    //
+
+    window.addEventListener( 'resize', onWindowResize, false );
+
+}
+
+function resample() {
+
+    var vertexCount = surface.geometry.getAttribute( 'position' ).count;
+
+    console.info( 'Sampling ' + count + ' points from a surface with ' + vertexCount + ' vertices...' );
+
+    //
+
+    console.time( '.build()' );
+
+    sampler = new MeshSurfaceSampler( surface )
+        .setWeightAttribute( api.distribution === 'weighted' ? 'uv' : null )
+        .build();
+
+    console.timeEnd( '.build()' );
+
+    //
+
+    console.time( '.sample()' );
+
+    for ( var i = 0; i < count; i ++ ) {
+
+        ages[ i ] = Math.random();
+        scales[ i ] = scaleCurve( ages[ i ] );
+
+        resampleParticle( i );
+
+    }
+
+    console.timeEnd( '.sample()' );
+
+    stemMesh.instanceMatrix.needsUpdate = true;
+    blossomMesh.instanceMatrix.needsUpdate = true;
+
+}
+
+function resampleParticle( i ) {
+
+    sampler.sample( _position, _normal );
+    _normal.add( _position );
+
+    dummy.position.copy( _position );
+    dummy.scale.set( scales[ i ], scales[ i ], scales[ i ] );
+    dummy.lookAt( _normal );
+    dummy.updateMatrix();
+
+    stemMesh.setMatrixAt( i, dummy.matrix );
+    blossomMesh.setMatrixAt( i, dummy.matrix );
+
+}
+
+function updateParticle( i ) {
+
+    // Update lifecycle.
+
+    ages[ i ] += 0.005;
+
+    if ( ages[ i ] >= 1 ) {
+
+        ages[ i ] = 0.001;
+        scales[ i ] = scaleCurve( ages[ i ] );
+
+        resampleParticle( i );
+
+        return;
+
+    }
+
+    // Update scale.
+
+    var prevScale = scales[ i ];
+    scales[ i ] = scaleCurve( ages[ i ] );
+    _scale.set( scales[ i ] / prevScale, scales[ i ] / prevScale, scales[ i ] / prevScale );
+
+    // Update transform.
+
+    stemMesh.getMatrixAt( i, dummy.matrix );
+    dummy.matrix.scale( _scale );
+    stemMesh.setMatrixAt( i, dummy.matrix );
+    blossomMesh.setMatrixAt( i, dummy.matrix );
+
+}
+
+function onWindowResize() {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+}
+
+//
+
+function animate() {
+
+    requestAnimationFrame( animate );
+
+    render();
+
+    stats.update();
+
+}
+
+function render() {
+
+    if ( stemMesh && blossomMesh ) {
+
+        var time = Date.now() * 0.001;
+
+        scene.rotation.x = Math.sin( time / 4 );
+        scene.rotation.y = Math.sin( time / 2 );
+
+        for ( var i = 0; i < api.count; i ++ ) {
+
+            updateParticle( i );
+
         }
 
-        // Shape on plane
-        var shapeBody = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(0.01, 0.01, 0.01) });
-        shapeBody.addShape(shape);
-        shapeBody.angularVelocity.set(0,1,0);
-        world.addBody(shapeBody);
-        demo.addVisual(shapeBody);
+        stemMesh.instanceMatrix.needsUpdate = true;
+        blossomMesh.instanceMatrix.needsUpdate = true;
 
-        var from = new CANNON.Vec3(10,1,0);
-        var to = new CANNON.Vec3(-10,1,0);
-        var result = new CANNON.RaycastResult();
-        var raycastOptions = {};
-        var listener = function (evt) {
-          for(var i=0; i<N; i++){
-            for(var j=0; j<N; j++){
-              from.set(
-                10,
-                i * 0.1,
-                j * 0.1
-              );
-              to.set(
-                -10,
-                i * 0.1,
-                j * 0.1
-              );
-              result.reset();
-              world.raycastClosest(from, to, raycastOptions, result);
-              particleBodies[i * N + j].position.copy(result.hitPointWorld);
-            }
-          }
-        };
-        world.addEventListener('postStep', listener);
-        var destroyer = function(){
-          world.removeEventListener('postStep', listener);
-          demo.removeEventListener('destroy', destroyer);
-        };
-        demo.addEventListener('destroy', destroyer);
-      });
+    }
 
-      demo.start();
+    renderer.render( scene, camera );
+
+}
