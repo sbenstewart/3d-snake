@@ -9,7 +9,7 @@ var camera, scene, renderer, stats;
 
 var api = {
 
-    count: 350,
+    count: 10,
     distribution: 'random',
     resample: resample,
     surfaceColor: 0xFFF784,
@@ -66,7 +66,7 @@ loader.load( '../models/Flower.glb', function ( gltf ) {
 
     var defaultTransform = new THREE.Matrix4()
         .makeRotationX( Math.PI )
-        .multiply( new THREE.Matrix4().makeScale( 7, 7, 7 ) );
+        .multiply( new THREE.Matrix4().makeScale( 35, 35, 35 ) );
 
     stemGeometry.applyMatrix4( defaultTransform );
     blossomGeometry.applyMatrix4( defaultTransform );
@@ -137,17 +137,17 @@ function init() {
 
     } );
 
-    // gui.addColor( api, 'backgroundColor' ).onChange( function () {
+    gui.addColor( api, 'backgroundColor' ).onChange( function () {
 
-    // 	scene.background.setHex( api.backgroundColor );
+     	scene.background.setHex( api.backgroundColor );
 
-    // } );
+    } );
 
-    // gui.addColor( api, 'surfaceColor' ).onChange( function () {
+    gui.addColor( api, 'surfaceColor' ).onChange( function () {
 
-    // 	surfaceMaterial.color.setHex( api.surfaceColor );
+    surfaceMaterial.color.setHex( api.surfaceColor );
 
-    // } );
+    } );
 
     gui.add( api, 'distribution' ).options( [ 'random', 'weighted' ] ).onChange( resample );
     gui.add( api, 'resample' );
