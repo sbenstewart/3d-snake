@@ -9,7 +9,7 @@ var camera, scene, renderer, stats;
 
 var api = {
 
-    count: 10,
+    count: 2,
     distribution: 'random',
     resample: resample,
     surfaceColor: 0xFFF784,
@@ -201,8 +201,8 @@ function resample() {
 
     console.timeEnd( '.sample()' );
 
-    stemMesh.instanceMatrix.needsUpdate = true;
-    blossomMesh.instanceMatrix.needsUpdate = true;
+    stemMesh.instanceMatrix.needsUpdate = false;
+    blossomMesh.instanceMatrix.needsUpdate = false;
 
 }
 
@@ -289,8 +289,8 @@ function render() {
 
         }
 
-        stemMesh.instanceMatrix.needsUpdate = true;
-        blossomMesh.instanceMatrix.needsUpdate = true;
+        stemMesh.instanceMatrix.needsUpdate = false;
+        blossomMesh.instanceMatrix.needsUpdate = false;
 
     }
 
