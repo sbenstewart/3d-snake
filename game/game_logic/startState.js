@@ -142,7 +142,7 @@
         //set torus material and make wireframe
         gameData.torus.material = gameData.torusMat;
  
-        gameData.torus.material.wireframe = true;
+        gameData.torus.material.wireframe = false;
  
     }
 

@@ -105,7 +105,7 @@ MockBabylon = jest.fn ( function ()
     this.StandardMaterial = jest.fn ( function ( name )
     {
         this.name = name;
-        this.wireframe = false;
+        this.wireframe = true;
     });
 
     //Mock Babylon has its own Vector3 constructor
@@ -323,7 +323,7 @@ describe ( "window.babylonProject.startState", () =>
             .toBe ( gameData.torusMat );
 
         expect ( torus.material.wireframe )
-            .toBe ( true );
+            .toBe ( false );
 
 
     });

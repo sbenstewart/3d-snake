@@ -156,7 +156,7 @@
         let buttonData = [
             {
                 name        : "up",
-                text        : "U",
+                text        : "up",
                 dir         : config.dirUp,
                 pos         : config.upPos,
                 controlName : "upControl"
@@ -164,7 +164,7 @@
 
             {
                 name        : "down",
-                text        : "D",
+                text        : "down",
                 dir         : config.dirDown,
                 pos         : config.downPos,
                 controlName : "downControl"

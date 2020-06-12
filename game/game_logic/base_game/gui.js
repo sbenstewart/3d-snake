@@ -48,7 +48,7 @@
         button.width = 1;
         button.height = 0.4;
         button.color = "white";
-        button.fontSize = 50;
+        button.fontSize = 100;
         button.background = "green";
 
         button.onPointerUpObservable.add ( buttonOptions.buttonCall );
