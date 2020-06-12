@@ -172,7 +172,7 @@
 
             {
                 name        : "left",
-                text        : "L",
+                text        : "left",
                 dir         : config.dirLeft,
                 pos         : config.leftPos,
                 controlName : "leftControl"
@@ -180,7 +180,7 @@
 
             {
                 name        : "right",
-                text        : "R",
+                text        : "right",
                 dir         : config.dirRight,
                 pos         : config.rightPos,
                 controlName : "rightControl"

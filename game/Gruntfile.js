@@ -9,17 +9,6 @@ module.exports = function ( grunt ) {
 
     grunt.initConfig ({
 
-        run: 
-        {
-            options: 
-            {
-            },
-            npm_test_jest:
-            {
-                cmd : 'npm',
-                args : [ 'test', '--', '--bail', './game_logic/' ]
-            }
-        },
 
         concat : 
         {
@@ -32,5 +21,5 @@ module.exports = function ( grunt ) {
                  
     });
 
-    grunt.registerTask( 'default', ['run:npm_test_jest','concat']);
+    grunt.registerTask( 'default', ['concat']);
 };
